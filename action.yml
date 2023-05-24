@@ -1,0 +1,41 @@
+name: Upload to FTP
+
+description: Upload files to an FTP server
+
+inputs:
+  local_dir:
+    description: 'The local directory containing files to upload'
+    required: true
+  server:
+    description: 'The FTP server to upload files to'
+    required: true
+  username:
+    description: 'The username to use when connecting to the FTP server'
+    required: true
+  password:
+    description: 'The password to use when connecting to the FTP server'
+    required: true
+  server_dir:
+    description: 'The remote directory on the FTP server to upload files to'
+    required: true
+
+outputs:
+  success:
+    description: 'Returns true if the files were uploaded successfully'
+    value: ${{ steps.upload.outputs.success }}
+
+runs:
+  using: 'docker'
+  image: 'ghcr.io/mhungwebdev/push-to-cpanel:latest'
+
+steps:
+  - name: Upload files via FTP
+    id: upload
+    env:
+      FTP_SERVER: ${{ inputs.server }}
+      FTP_USER: ${{ inputs.username }}
+      FTP_PASSWORD: ${{ inputs.password }}
+      FTP_SERVER_DIR: ${{ inputs.remote-dir }}
+    run: |
+      lftp -c "set ftp:ssl-allow no; open -p 21 -u $FTP_USER,$FTP_PASSWORD $FTP_SERVER; mirror -R $INPUT_LOCAL_DIR $FTP_SERVER_DIR"
+    shell: bash
