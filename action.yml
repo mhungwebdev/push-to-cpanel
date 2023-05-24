@@ -1,41 +1,27 @@
 name: Upload to FTP
 
-description: Upload files to an FTP server
+on:
+  push:
+    branches:
+      - main
 
-inputs:
-  local_dir:
-    description: 'The local directory containing files to upload'
-    required: true
-  server:
-    description: 'The FTP server to upload files to'
-    required: true
-  username:
-    description: 'The username to use when connecting to the FTP server'
-    required: true
-  password:
-    description: 'The password to use when connecting to the FTP server'
-    required: true
-  server_dir:
-    description: 'The remote directory on the FTP server to upload files to'
-    required: true
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
 
-outputs:
-  success:
-    description: 'Returns true if the files were uploaded successfully'
-    value: ${{ steps.upload.outputs.success }}
+      - name: Install lftp
+        run: sudo apt-get install lftp -y
 
-runs:
-  using: 'docker'
-  image: 'ghcr.io/mhungwebdev/push-to-cpanel:latest'
+      - name: Delete remote files
+        run: |
+          lftp -c "set ftp:ssl-allow no; open -p ${{ env.PORT }} -u ${{ env.USERNAME }},${{ env.PASSWORD }} ${{ env.SERVER }}; cd ${{ env.SERVER_DIR }}; rm -rf *"
 
-steps:
-  - name: Upload files via FTP
-    id: upload
-    env:
-      FTP_SERVER: ${{ inputs.server }}
-      FTP_USER: ${{ inputs.username }}
-      FTP_PASSWORD: ${{ inputs.password }}
-      FTP_SERVER_DIR: ${{ inputs.remote-dir }}
-    run: |
-      lftp -c "set ftp:ssl-allow no; open -p 21 -u $FTP_USER,$FTP_PASSWORD $FTP_SERVER; mirror -R $INPUT_LOCAL_DIR $FTP_SERVER_DIR"
-    shell: bash
+      - name: Upload files via FTP
+        run: |
+          lftp -c "set ftp:ssl-allow no; open -p ${{ env.PORT }} -u ${{ env.USERNAME }},${{ env.PASSWORD }} ${{ env.SERVER }}; mirror -R ${{ env.LOCAL_DIR }} ${{ env.SERVER_DIR }}"
+        env:
+          LOCAL_DIR: ${{ env.LOCAL_DIR }}
+          FTP_SERVER_DIR: ${{ env.SERVER_DIR }}
